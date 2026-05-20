@@ -1,6 +1,4 @@
 librosa
-torch
-torchaudio
 numpy
 pandas
 scikit-learn
@@ -11,3 +9,6 @@ notebook
 tqdm
 soundfile
 ipykernel
+torch==2.8.0+cpu
+torchvision==0.23.0+cpu
+torchaudio==2.8.0+cpu
