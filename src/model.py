@@ -12,12 +12,7 @@ class SoundCNN1D(nn.Module):
     def __init__(self, num_classes=50):
         super().__init__()
         self.layers = nn.Sequential(
-            nn.Conv1d(1, 16, kernel_size=9, padding=4),
-            nn.BatchNorm1d(16),
-            nn.ReLU(),
-            nn.MaxPool1d(4),
-
-            nn.Conv1d(16, 32, kernel_size=9, padding=4),
+            nn.Conv1d(1, 32, kernel_size=9, padding=4),
             nn.BatchNorm1d(32),
             nn.ReLU(),
             nn.MaxPool1d(4),
@@ -30,16 +25,26 @@ class SoundCNN1D(nn.Module):
             nn.Conv1d(64, 128, kernel_size=9, padding=4),
             nn.BatchNorm1d(128),
             nn.ReLU(),
-            nn.MaxPool1d(5),
+            nn.MaxPool1d(4),
 
-            nn.Conv1d(128, 256, kernel_size=9, padding=4),
+            nn.Conv1d(128, 256, kernel_size=7, padding=3),
             nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.MaxPool1d(5),
+            nn.MaxPool1d(4),
+
+            nn.Conv1d(256, 512, kernel_size=7, padding=3),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.MaxPool1d(4),
+
+            nn.Conv1d(512, 512, kernel_size=5, padding=2),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.MaxPool1d(2),
         )
 
-        self.dropout = nn.Dropout(0.3)
-        self.fc = nn.Linear(256, num_classes)
+        self.dropout = nn.Dropout(0.4)
+        self.fc = nn.Linear(512, num_classes)
 
     def forward(self, x):
         x = self.layers(x)

@@ -25,7 +25,7 @@ def make_dataloader(csv_file, audio_folder, folds, batch_size, augment=False):
     return DataLoader(dataset, batch_size=batch_size, shuffle=augment, num_workers=0)
 
 
-def train_one_epoch(model, loader, loss_fn, optimizer, device):
+def train_one_epoch(model, loader, loss_fn, optimizer, scheduler, device):
     model.train()
     losses = []
     all_preds = []
@@ -40,6 +40,7 @@ def train_one_epoch(model, loader, loss_fn, optimizer, device):
         loss = loss_fn(outputs, labels)
         loss.backward()
         optimizer.step()
+        scheduler.step()
 
         losses.append(loss.item())
         all_preds.extend(outputs.argmax(dim=1).cpu().tolist())
@@ -74,7 +75,7 @@ def evaluate(model, loader, loss_fn, device):
     return avg_loss, acc, cm
 
 
-def run_fold(csv_file, audio_folder, val_fold, num_classes=50, batch_size=16, lr=1e-3, epochs=20):
+def run_fold(csv_file, audio_folder, val_fold, num_classes=50, batch_size=16, lr=1e-3, epochs=30):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_folds = [f for f in range(1, 6) if f != val_fold]
 
@@ -83,13 +84,14 @@ def run_fold(csv_file, audio_folder, val_fold, num_classes=50, batch_size=16, lr
 
     model = get_model(num_classes=num_classes).to(device)
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+    scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=5, T_mult=1, eta_min=1e-5)
 
     best_val_acc = 0.0
     best_model = None
 
     for epoch in range(epochs):
-        train_loss, train_acc = train_one_epoch(model, train_loader, loss_fn, optimizer, device)
+        train_loss, train_acc = train_one_epoch(model, train_loader, loss_fn, optimizer, scheduler, device)
         val_loss, val_acc, _ = evaluate(model, valid_loader, loss_fn, device)
 
         print("Fold", val_fold, "Epoch", epoch + 1)
@@ -103,7 +105,7 @@ def run_fold(csv_file, audio_folder, val_fold, num_classes=50, batch_size=16, lr
     return best_val_acc, best_model
 
 
-def run_cross_validation(csv_file, audio_folder, num_classes=50, batch_size=16, lr=1e-3, epochs=20):
+def run_cross_validation(csv_file, audio_folder, num_classes=50, batch_size=16, lr=1e-3, epochs=30):
     results = []
     for fold in range(1, 6):
         print("\n=== Fold", fold, "===")
