@@ -57,6 +57,30 @@ def random_gain(audio, min_gain=0.7, max_gain=1.3):
     return audio * gain
 
 
+def random_noise(audio, snr_db=20.0):
+    if random.random() > 0.5:
+        return audio
+    signal_power = np.mean(audio ** 2)
+    snr_linear = 10 ** (snr_db / 10.0)
+    noise_power = signal_power / snr_linear
+    noise = np.random.normal(0, np.sqrt(noise_power), len(audio))
+    return audio + noise
+
+
+def random_pitch_shift(audio, sr=TARGET_SR, n_steps_range=(-2, 2)):
+    if random.random() > 0.5:
+        return audio
+    n_steps = random.randint(n_steps_range[0], n_steps_range[1])
+    return librosa.effects.pitch_shift(audio, sr=sr, n_steps=n_steps)
+
+
+def random_time_stretch(audio, rate_range=(0.9, 1.1)):
+    if random.random() > 0.5:
+        return audio
+    rate = random.uniform(rate_range[0], rate_range[1])
+    return librosa.effects.time_stretch(audio, rate=rate)
+
+
 class ESC50Dataset(Dataset):
     def __init__(self, csv_file, audio_folder, folds=None, augment=False, transform=None):
         self.csv_file = Path(csv_file)
@@ -83,8 +107,12 @@ class ESC50Dataset(Dataset):
         audio = normalize(audio)
 
         if self.augment:
-            audio = random_shift(audio)
-            audio = random_gain(audio)
+            audio = random_shift(audio, max_shift=0.15)
+            audio = random_gain(audio, min_gain=0.6, max_gain=1.4)
+            audio = random_noise(audio, snr_db=18.0)
+            audio = random_pitch_shift(audio)
+            audio = random_time_stretch(audio)
+            audio = fix_length(audio)
             audio = normalize(audio)
 
         audio = torch.from_numpy(audio).float().unsqueeze(0)
